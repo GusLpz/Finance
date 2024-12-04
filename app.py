@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import numpy as np
 from datetime import datetime, timedelta
 
@@ -11,9 +12,6 @@ def obtener_datos_acciones(simbolos, start_date, end_date):
     return data.ffill().dropna()
 
 def calcular_metricas(df):
-    if df.empty:  # Verificar si el DataFrame está vacío
-        return pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-    
     returns = df.pct_change().dropna()
     cumulative_returns = (1 + returns).cumprod() - 1
     normalized_prices = df / df.iloc[0] * 100
@@ -42,10 +40,74 @@ def calcular_sortino_ratio(returns, risk_free_rate=0.02, target_return=0):
     downside_deviation = np.sqrt(np.mean(downside_returns**2))
     return np.sqrt(252) * excess_returns.mean() / downside_deviation if downside_deviation != 0 else np.nan
 
+# Nuevas funciones para VaR y CVaR
 def calcular_var_cvar(returns, confidence=0.95):
     VaR = returns.quantile(1 - confidence)
     CVaR = returns[returns <= VaR].mean()
     return VaR, CVaR
+
+def calcular_var_cvar_ventana(returns, window):
+    if len(returns) < window:
+        return np.nan, np.nan
+    window_returns = returns.iloc[-window:]
+    return calcular_var_cvar(window_returns)
+
+def crear_histograma_distribucion(returns, var_95, cvar_95, title):
+    # Crear el histograma base
+    fig = go.Figure()
+    
+    # Calcular los bins para el histograma
+    counts, bins = np.histogram(returns, bins=50)
+    
+    # Separar los bins en dos grupos: antes y después del VaR
+    mask_before_var = bins[:-1] <= var_95
+    
+    # Añadir histograma para valores antes del VaR (rojo)
+    fig.add_trace(go.Bar(
+        x=bins[:-1][mask_before_var],
+        y=counts[mask_before_var],
+        width=np.diff(bins)[mask_before_var],
+        name='Retornos < VaR',
+        marker_color='rgba(255, 65, 54, 0.6)'
+    ))
+    
+    # Añadir histograma para valores después del VaR (azul)
+    fig.add_trace(go.Bar(
+        x=bins[:-1][~mask_before_var],
+        y=counts[~mask_before_var],
+        width=np.diff(bins)[~mask_before_var],
+        name='Retornos > VaR',
+        marker_color='rgba(31, 119, 180, 0.6)'
+    ))
+    
+    # Añadir líneas verticales para VaR y CVaR
+    fig.add_trace(go.Scatter(
+        x=[var_95, var_95],
+        y=[0, max(counts)],
+        mode='lines',
+        name='VaR 95%',
+        line=dict(color='green', width=2, dash='dash')
+    ))
+    
+    fig.add_trace(go.Scatter(
+        x=[cvar_95, cvar_95],
+        y=[0, max(counts)],
+        mode='lines',
+        name='CVaR 95%',
+        line=dict(color='purple', width=2, dash='dot')
+    ))
+    
+    # Actualizar el diseño
+    fig.update_layout(
+        title=title,
+        xaxis_title='Retornos',
+        yaxis_title='Frecuencia',
+        showlegend=True,
+        barmode='overlay',
+        bargap=0
+    )
+    
+    return fig
 
 # Configuración de la página
 st.set_page_config(page_title="Analizador de Portafolio", layout="wide")
@@ -89,11 +151,7 @@ else:
     # Obtener datos
     all_symbols = simbolos + [benchmark]
     df_stocks = obtener_datos_acciones(all_symbols, start_date, end_date)
-    
-    if df_stocks.empty:
-        st.error("No se pudieron obtener datos para los símbolos proporcionados. Verifique los símbolos y el rango de fechas.")
-    else:
-        returns, cumulative_returns, normalized_prices = calcular_metricas(df_stocks)
+    returns, cumulative_returns, normalized_prices = calcular_metricas(df_stocks)
     
     # Rendimientos del portafolio
     portfolio_returns = calcular_rendimientos_portafolio(returns[simbolos], pesos)
