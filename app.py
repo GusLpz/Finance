@@ -242,7 +242,7 @@ with tab1:
     col4, col5, col6 = st.columns(3)
     col4.metric("VaR 95%", f"{var_95:.2%}")
     col5.metric("CVaR 95%", f"{cvar_95:.2%}")
-    col6.metric("Media Retornos", f"{round(returns[selected_asset].mean(),7):.2%}")
+    col6.metric("Media Retornos", f"{round(returns[selected_asset].mean(),7):.3%}")
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
