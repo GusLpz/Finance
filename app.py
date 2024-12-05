@@ -16,6 +16,10 @@ def calcular_metricas(df):
     cumulative_returns = (1 + returns).cumprod() - 1
     normalized_prices = df / df.iloc[0] * 100
     return returns, cumulative_returns, normalized_prices
+def calcular_media(df):
+    returns = df.pct_change().dropna()
+    media = returns.mean()
+    return media
 
 def calcular_rendimientos_portafolio(returns, weights):
     return (returns * weights).sum(axis=1)
@@ -140,7 +144,8 @@ start_date_options = {
     "1 año": end_date - timedelta(days=365),
     "3 años": end_date - timedelta(days=3*365),
     "5 años": end_date - timedelta(days=5*365),
-    "10 años": end_date - timedelta(days=10*365)
+    "10 años": end_date - timedelta(days=10*365),
+    "2010-2023": datetime(2010, 1, 1) - datetime(2023,12,31)
 }
 selected_window = st.sidebar.selectbox("Seleccione la ventana de tiempo para el análisis:", list(start_date_options.keys()))
 start_date = start_date_options[selected_window]
@@ -231,15 +236,17 @@ with tab1:
     
     # Calcular VaR y CVaR para el activo seleccionado
     var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
+    mediaRet = calcular_media(returns[selected_asset])
     
     col1, col2, col3 = st.columns(3)
     col1.metric("Rendimiento Total", f"{cumulative_returns[selected_asset].iloc[-1]:.2%}")
     col2.metric("Sharpe Ratio", f"{calcular_sharpe_ratio(returns[selected_asset]):.2f}")
     col3.metric("Sortino Ratio", f"{calcular_sortino_ratio(returns[selected_asset]):.2f}")
     
-    col4, col5 = st.columns(2)
+    col4, col5, col6 = st.columns(3)
     col4.metric("VaR 95%", f"{var_95:.2%}")
     col5.metric("CVaR 95%", f"{cvar_95:.2%}")
+    col6.metric("Media Retornos", f"{mediaRet}"
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
