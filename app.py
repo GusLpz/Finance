@@ -232,7 +232,7 @@ with tab1:
     
     # Calcular VaR y CVaR para el activo seleccionado
     var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
-    mediaRet = calcular_metricas(returns[selected_asset])
+    
     
     col1, col2, col3 = st.columns(3)
     col1.metric("Rendimiento Total", f"{cumulative_returns[selected_asset].iloc[-1]:.2%}")
@@ -242,7 +242,7 @@ with tab1:
     col4, col5, col6 = st.columns(3)
     col4.metric("VaR 95%", f"{var_95:.2%}")
     col5.metric("CVaR 95%", f"{cvar_95:.2%}")
-    col6.metric("Media Retornos", f"{mediaRet[0]}")
+    col6.metric("Media Retornos", f"{returns[selected_asset].mean()}")
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
