@@ -17,6 +17,10 @@ def calcular_metricas(df):
     normalized_prices = df / df.iloc[0] * 100
     return returns, cumulative_returns, normalized_prices
 
+def calcular_sesgo(df):
+   
+    return df.skew()
+
 def calcular_rendimientos_portafolio(returns, weights):
     return (returns * weights).sum(axis=1)
 
@@ -232,6 +236,7 @@ with tab1:
     
     # Calcular VaR y CVaR para el activo seleccionado
     var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
+    sesgo = calcular_sesgo(returns[selected_asset])
     
     
     col1, col2, col3 = st.columns(3)
@@ -243,6 +248,9 @@ with tab1:
     col4.metric("VaR 95%", f"{var_95:.2%}")
     col5.metric("CVaR 95%", f"{cvar_95:.2%}")
     col6.metric("Media Retornos", f"{round(returns[selected_asset].mean(),7):.3%}")
+
+    col7 = st.columns(1)
+    col7[0].metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
