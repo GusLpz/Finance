@@ -2,6 +2,7 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 import plotly.graph_objects as go
+import plotly.express as px
 import numpy as np
 from datetime import datetime, timedelta
 
@@ -45,12 +46,23 @@ def calcular_var_cvar(returns, confidence=0.95):
     CVaR = returns[returns <= VaR].mean()
     return VaR, CVaR
 
+def calcular_var_cvar_ventana(returns, window):
+    if len(returns) < window:
+        return np.nan, np.nan
+    window_returns = returns.iloc[-window:]
+    return calcular_var_cvar(window_returns)
+
 def crear_histograma_distribucion(returns, var_95, cvar_95, title):
     # Crear el histograma base
     fig = go.Figure()
+    
+    # Calcular los bins para el histograma
     counts, bins = np.histogram(returns, bins=50)
+    
+    # Separar los bins en dos grupos: antes y después del VaR
     mask_before_var = bins[:-1] <= var_95
     
+    # Añadir histograma para valores antes del VaR (rojo)
     fig.add_trace(go.Bar(
         x=bins[:-1][mask_before_var],
         y=counts[mask_before_var],
@@ -58,6 +70,8 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         name='Retornos < VaR',
         marker_color='rgba(255, 65, 54, 0.6)'
     ))
+    
+    # Añadir histograma para valores después del VaR (azul)
     fig.add_trace(go.Bar(
         x=bins[:-1][~mask_before_var],
         y=counts[~mask_before_var],
@@ -65,6 +79,8 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         name='Retornos > VaR',
         marker_color='rgba(31, 119, 180, 0.6)'
     ))
+    
+    # Añadir líneas verticales para VaR y CVaR
     fig.add_trace(go.Scatter(
         x=[var_95, var_95],
         y=[0, max(counts)],
@@ -72,6 +88,7 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         name='VaR 95%',
         line=dict(color='green', width=2, dash='dash')
     ))
+    
     fig.add_trace(go.Scatter(
         x=[cvar_95, cvar_95],
         y=[0, max(counts)],
@@ -79,6 +96,8 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         name='CVaR 95%',
         line=dict(color='purple', width=2, dash='dot')
     ))
+    
+    # Actualizar el diseño
     fig.update_layout(
         title=title,
         xaxis_title='Retornos',
@@ -87,6 +106,7 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         barmode='overlay',
         bargap=0
     )
+    
     return fig
 
 # Configuración de la página
@@ -94,7 +114,7 @@ st.set_page_config(page_title="Analizador de Portafolio", layout="wide")
 st.sidebar.title("Analizador de Portafolio de Inversión")
 
 # Entrada de símbolos y pesos
-simbolos_input = st.sidebar.text_input("Ingrese los símbolos de las acciones separados por comas (por ejemplo: AAPL,GOOGL,MSFT):", "AGG,EMB,EEM,DBC,URTH")
+simbolos_input = st.sidebar.text_input("Ingrese los símbolos de las acciones separados por comas (por ejemplo: AAPL,GOOGL,MSFT):", "AAPL,GOOGL,MSFT,AMZN,NVDA")
 pesos_input = st.sidebar.text_input("Ingrese los pesos correspondientes separados por comas (deben sumar 1):", "0.2,0.2,0.2,0.2,0.2")
 
 simbolos = [s.strip() for s in simbolos_input.split(',')]
@@ -125,60 +145,6 @@ start_date_options = {
 selected_window = st.sidebar.selectbox("Seleccione la ventana de tiempo para el análisis:", list(start_date_options.keys()))
 start_date = start_date_options[selected_window]
 
-# Diccionario con información de los ETFs
-etfs_info = {
-    "AGG": {
-        "Nombre": "iShares Core US Aggregate Bond ETF",
-        "Exposición": "Bonos de alta calidad en EE.UU.",
-        "Índice": "Bloomberg US Aggregate Bond Index",
-        "Moneda": "USD",
-        "Países": "Estados Unidos",
-        "Métricas de Riesgo": "Duración: ~6-8 años, Beta: Bajo",
-        "Estilo": "Bonos investment grade",
-        "Costos": "0.03% Expense Ratio"
-    },
-    "EMB": {
-        "Nombre": "iShares J.P. Morgan USD Emerging Markets Bond ETF",
-        "Exposición": "Bonos soberanos y corporativos en mercados emergentes",
-        "Índice": "J.P. Morgan EMBI Global Core Index",
-        "Moneda": "USD",
-        "Países": "Brasil, México, Sudáfrica, Turquía, entre otros",
-        "Métricas de Riesgo": "Duración: ~7-10 años, Beta: Moderado",
-        "Estilo": "Deuda emergente en USD",
-        "Costos": "0.39% Expense Ratio"
-    },
-    "EEM": {
-        "Nombre": "iShares MSCI Emerging Markets ETF",
-        "Exposición": "Acciones de mercados emergentes",
-        "Índice": "MSCI Emerging Markets Index",
-        "Moneda": "USD",
-        "Países": "China, India, Brasil, Corea del Sur",
-        "Métricas de Riesgo": "Beta: 1.2",
-        "Estilo": "Growth y Value",
-        "Costos": "0.69% Expense Ratio"
-    },
-    "DBC": {
-        "Nombre": "Invesco DB Commodity Index Tracking Fund",
-        "Exposición": "Materias primas diversificadas",
-        "Índice": "DBIQ Optimum Yield Diversified Commodity Index",
-        "Moneda": "USD",
-        "Países": "Global",
-        "Métricas de Riesgo": "Volatilidad: Alta",
-        "Estilo": "Materias primas",
-        "Costos": "0.85% Expense Ratio"
-    },
-    "URTH": {
-        "Nombre": "iShares MSCI World ETF",
-        "Exposición": "Acciones de mercados desarrollados",
-        "Índice": "MSCI World Index",
-        "Moneda": "USD",
-        "Países": "EE.UU., Europa, Japón",
-        "Métricas de Riesgo": "Beta: 1.0",
-        "Estilo": "Blend (Growth y Value)",
-        "Costos": "0.24% Expense Ratio"
-    }
-}
-
 if len(simbolos) != len(pesos) or abs(sum(pesos) - 1) > 1e-6:
     st.sidebar.error("El número de símbolos debe coincidir con el número de pesos, y los pesos deben sumar 1.")
 else:
@@ -186,7 +152,7 @@ else:
     all_symbols = simbolos + [benchmark]
     df_stocks = obtener_datos_acciones(all_symbols, start_date, end_date)
     returns, cumulative_returns, normalized_prices = calcular_metricas(df_stocks)
-        
+    
     # Rendimientos del portafolio
     portfolio_returns = calcular_rendimientos_portafolio(returns[simbolos], pesos)
     portfolio_cumulative_returns = (1 + portfolio_returns).cumprod() - 1
