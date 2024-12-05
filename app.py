@@ -39,6 +39,12 @@ def calcular_beta(asset_returns, market_returns):
 def calcular_sharpe_ratio(returns, risk_free_rate=0.02):
     excess_returns = returns - risk_free_rate / 252
     return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
+    
+def calcular_drawdown(cumulative_returns):
+    peak = cumulative_returns.cummax()  # Encuentra el máximo acumulado
+    drawdown = (cumulative_returns - peak) / peak  # Calcula el drawdown
+    max_drawdown = drawdown.min()  # Encuentra el drawdown máximo (más negativo)
+    return max_drawdown
 
 def calcular_sortino_ratio(returns, risk_free_rate=0.02, target_return=0):
     excess_returns = returns - risk_free_rate / 252
@@ -240,6 +246,9 @@ with tab1:
     var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
     sesgo = calcular_sesgo(returns[selected_asset])
     exceso_curtosis = calcular_exceso_curtosis(returns[selected_asset]) 
+    comReturns = calcular_metricas(returns[selected_asset])
+    drowdown = calcular_drawdown(comReturns[1])
+    
 
     
     
@@ -253,9 +262,10 @@ with tab1:
     col5.metric("CVaR 95%", f"{cvar_95:.2%}")
     col6.metric("Media Retornos", f"{round(returns[selected_asset].mean(),7):.3%}")
 
-    col7, col8 = st.columns(2)
+    col7, col8, col9 = st.columns(3)
     col7.metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
     col8.metric("Exceso de Curtosis", f"{exceso_curtosis:.3f}")  # Nueva métrica
+    col9.metric("DrowDown", f"{drowdown:.2f}")  # Nueva métrica
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
