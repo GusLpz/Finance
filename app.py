@@ -507,14 +507,18 @@ else:
             pesos_volatilidad, pesos_sharpe = optimizar_portafolio(returns_2010_2020_mxn)
             pesos_target = optimizar_portafolio(returns_2010_2020_mxn, target_return=0.10)
             
-            # Mostrar resultados en un DataFrame
-            resultados_portafolios = pd.DataFrame({
-                "ETF": simbolos,
-                "Mínima Volatilidad": pesos_volatilidad,
-                "Máximo Sharpe": pesos_sharpe,
-                "Volatilidad con Objetivo (10%)": pesos_target
-            })
-            st.subheader("Portafolios Óptimos (2010-2020 en MXN)")
-            st.dataframe(resultados_portafolios.style.format("{:.2%}"))
+            # Crear el DataFrame solo si las longitudes coinciden
+            if len(pesos_volatilidad) == len(simbolos) and len(pesos_sharpe) == len(simbolos) and len(pesos_target) == len(simbolos):
+                resultados_portafolios = pd.DataFrame({
+                    "ETF": simbolos,
+                    "Mínima Volatilidad": pesos_volatilidad,
+                    "Máximo Sharpe": pesos_sharpe,
+                    "Volatilidad con Objetivo (10%)": pesos_target
+                })
+                st.subheader("Portafolios Óptimos (2010-2020 en MXN)")
+                st.dataframe(resultados_portafolios.style.format("{:.2%}"))
+            else:
+                st.error("Error: Los pesos optimizados no coinciden con el número de activos.")
+
             
             
