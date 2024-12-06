@@ -137,13 +137,29 @@ def calcular_minima_varianza(returns):
     return result.x  # Retorna los pesos óptimos
 
 #Portafolio Maximo Sharpe Ratio
-def calcular_maximo_sharpe(returns, risk_free_rate=0.02):
-    n = returns.shape[1]
+def obtener_tasa_cambio_usd_mxn(start_date, end_date):
+    """
+    Obtiene las tasas de cambio USD/MXN desde Yahoo Finance.
+    """
+    data = yf.download("USDMXN=X", start=start_date, end=end_date)['Close']
+    return data.ffill().dropna()
+
+def ajustar_a_mxn(df, tasa_cambio):
+    """
+    Ajusta los precios de los ETFs a pesos mexicanos.
+    """
+    return df.multiply(tasa_cambio, axis=0)
+
+def calcular_maximo_sharpe_mxn(returns_mxn, risk_free_rate=0.02):
+    """
+    Calcula los pesos del portafolio de máximo Sharpe Ratio en pesos mexicanos.
+    """
+    n = returns_mxn.shape[1]
     
     # Función objetivo: maximizar el Sharpe Ratio
     def negative_sharpe_ratio(weights):
-        portfolio_return = np.dot(weights, returns.mean()) * 252
-        portfolio_std = np.sqrt(np.dot(weights.T, np.dot(returns.cov() * 252, weights)))
+        portfolio_return = np.dot(weights, returns_mxn.mean()) * 252
+        portfolio_std = np.sqrt(np.dot(weights.T, np.dot(returns_mxn.cov() * 252, weights)))
         sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_std
         return -sharpe_ratio  # Negativo para maximización
     
@@ -159,7 +175,7 @@ def calcular_maximo_sharpe(returns, risk_free_rate=0.02):
     # Optimización
     result = minimize(negative_sharpe_ratio, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
     
-    return result.x  #
+    return result.x  # Retorna los pesos óptimos
 
 # ETFs permitidos y datos
 etfs_permitidos = ["IEI", "EMB", "SPY", "IEMG", "GLD"]
@@ -177,6 +193,17 @@ pesos_input = st.sidebar.text_input(
 
 simbolos = [s.strip() for s in simbolos_input.split(',') if s.strip() in etfs_permitidos]
 pesos = [float(w.strip()) for w in pesos_input.split(',')]
+
+# Obtener tasa de cambio USD/MXN
+tasa_cambio_usd_mxn = obtener_tasa_cambio_usd_mxn(start_date, end_date)
+
+# Ajustar los precios de los ETFs a MXN
+df_stocks_mxn = ajustar_a_mxn(df_stocks[simbolos], tasa_cambio_usd_mxn)
+returns_mxn, cumulative_returns_mxn, normalized_prices_mxn = calcular_metricas(df_stocks_mxn)
+
+# Crear nueva pestaña para análisis del portafolio de máximo Sharpe Ratio en MXN
+tab4 = st.tabs(["Portafolio de Máximo Sharpe Ratio (MXN)"])[0]
+
 
 # Selección del benchmark
 benchmark_options = {
@@ -515,67 +542,60 @@ with tab3:
     st.plotly_chart(fig_dist, use_container_width=True)
 
 with tab4:
-    st.header("Análisis del Portafolio de Máximo Sharpe Ratio")
+    st.header("Análisis del Portafolio de Máximo Sharpe Ratio en Pesos Mexicanos")
     
     # Calcular los pesos óptimos
-    max_sharpe_weights = calcular_maximo_sharpe(returns[simbolos])
+    max_sharpe_weights_mxn = calcular_maximo_sharpe_mxn(returns_mxn)
     
-    # Calcular métricas del portafolio de máximo Sharpe Ratio
-    max_sharpe_returns = calcular_rendimientos_portafolio(returns[simbolos], max_sharpe_weights)
-    max_sharpe_cumulative = (1 + max_sharpe_returns).cumprod() - 1
-    max_sharpe_risk = np.sqrt(252) * max_sharpe_returns.std()
-    max_sharpe_mean_return = max_sharpe_returns.mean() * 252  # Anualizado
-    risk_free_rate = 0.02
-    max_sharpe_ratio = (max_sharpe_mean_return - risk_free_rate) / max_sharpe_risk
+    # Calcular métricas del portafolio de máximo Sharpe Ratio en MXN
+    max_sharpe_returns_mxn = calcular_rendimientos_portafolio(returns_mxn, max_sharpe_weights_mxn)
+    max_sharpe_cumulative_mxn = (1 + max_sharpe_returns_mxn).cumprod() - 1
+    max_sharpe_risk_mxn = np.sqrt(252) * max_sharpe_returns_mxn.std()
+    max_sharpe_mean_return_mxn = max_sharpe_returns_mxn.mean() * 252  # Anualizado
+    max_sharpe_ratio_mxn = (max_sharpe_mean_return_mxn - risk_free_rate) / max_sharpe_risk_mxn
     
-    st.subheader("Pesos del Portafolio de Máximo Sharpe Ratio")
-    weights_df = pd.DataFrame({
+    st.subheader("Pesos del Portafolio de Máximo Sharpe Ratio (MXN)")
+    weights_df_mxn = pd.DataFrame({
         "ETF": simbolos,
-        "Peso Óptimo": max_sharpe_weights
+        "Peso Óptimo (MXN)": max_sharpe_weights_mxn
     })
-    st.dataframe(weights_df.style.format({"Peso Óptimo": "{:.2%}"}))
+    st.dataframe(weights_df_mxn.style.format({"Peso Óptimo (MXN)": "{:.2%}"}))
     
     # Mostrar métricas clave
     col1, col2, col3 = st.columns(3)
-    col1.metric("Riesgo (Desviación Estándar Anualizada)", f"{max_sharpe_risk:.2%}")
-    col2.metric("Rendimiento Esperado Anualizado", f"{max_sharpe_mean_return:.2%}")
-    col3.metric("Sharpe Ratio", f"{max_sharpe_ratio:.2f}")
+    col1.metric("Riesgo (Desviación Estándar Anualizada)", f"{max_sharpe_risk_mxn:.2%}")
+    col2.metric("Rendimiento Esperado Anualizado", f"{max_sharpe_mean_return_mxn:.2%}")
+    col3.metric("Sharpe Ratio", f"{max_sharpe_ratio_mxn:.2f}")
     
     # Comparar rendimientos acumulados
     fig_cumulative = go.Figure()
     fig_cumulative.add_trace(go.Scatter(
-        x=max_sharpe_cumulative.index, 
-        y=max_sharpe_cumulative, 
-        name="Portafolio de Máximo Sharpe Ratio",
+        x=max_sharpe_cumulative_mxn.index, 
+        y=max_sharpe_cumulative_mxn, 
+        name="Portafolio Máximo Sharpe Ratio (MXN)",
         line=dict(color='gold')
     ))
     fig_cumulative.add_trace(go.Scatter(
-        x=portfolio_cumulative_returns.index, 
-        y=portfolio_cumulative_returns, 
-        name="Portafolio Actual",
+        x=cumulative_returns_mxn.index, 
+        y=cumulative_returns_mxn.mean(axis=1), 
+        name="Promedio ETFs en MXN",
         line=dict(color='orange', dash='dot')
     ))
-    fig_cumulative.add_trace(go.Scatter(
-        x=cumulative_returns.index, 
-        y=cumulative_returns[benchmark], 
-        name=f"Benchmark: {selected_benchmark}",
-        line=dict(color='green', dash='dash')
-    ))
     fig_cumulative.update_layout(
-        title="Comparación de Rendimientos Acumulados",
+        title="Comparación de Rendimientos Acumulados (MXN)",
         xaxis_title="Fecha",
-        yaxis_title="Rendimientos Acumulados",
+        yaxis_title="Rendimientos Acumulados (MXN)",
         plot_bgcolor='rgba(240,240,240,1)'
     )
     st.plotly_chart(fig_cumulative, use_container_width=True)
     
-    # Distribución de rendimientos del portafolio de máximo Sharpe Ratio
-    var_95, cvar_95 = calcular_var_cvar(max_sharpe_returns)
+    # Distribución de rendimientos del portafolio de máximo Sharpe Ratio en MXN
+    var_95_mxn, cvar_95_mxn = calcular_var_cvar(max_sharpe_returns_mxn)
     fig_dist = crear_histograma_distribucion(
-        max_sharpe_returns,
-        var_95,
-        cvar_95,
-        title="Distribución de Retornos del Portafolio de Máximo Sharpe Ratio"
+        max_sharpe_returns_mxn,
+        var_95_mxn,
+        cvar_95_mxn,
+        title="Distribución de Retornos del Portafolio Máximo Sharpe Ratio (MXN)"
     )
     st.plotly_chart(fig_dist, use_container_width=True)
-       
+    
