@@ -58,6 +58,12 @@ def calcular_var_cvar_ventana(returns, window):
     window_returns = returns.iloc[-window:]
     return calcular_var_cvar(window_returns)
 
+def calcular_ultimo_drawdown(series):
+    peak = series.expanding(min_periods=1).max()
+    drawdown = (series - peak) / peak
+    ultimo_drawdown = drawdown.iloc[-1]
+    return ultimo_drawdown
+
 def crear_histograma_distribucion(returns, var_95, cvar_95, title):
     # Crear el histograma base
     fig = go.Figure()
@@ -238,6 +244,7 @@ else:
         var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
         sesgo = calcular_sesgo(returns[selected_asset])
         exceso_curtosis = calcular_exceso_curtosis(returns[selected_asset]) 
+        ultimo_drawdown = calcular_ultimo_drawdown(cumulative_returns[selected_asset])
    
         
         col1, col2, col3 = st.columns(3)
@@ -250,9 +257,10 @@ else:
         col5.metric("CVaR 95%", f"{cvar_95:.2%}")
         col6.metric("Media Retornos", f"{returns[selected_asset].mean():.2f}")
         
-        col7, col8 = st.columns(2)
+        col7, col8, col9 = st.columns(3)
         col7.metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
         col8.metric("Exceso de Curtosis", f"{exceso_curtosis:.3f}")  
+        col9.metric("Último Drawdown", f"{ultimo_drawdown:.2%}")  # Último Drawdown añadido
         
         # Gráfico de precio normalizado del activo seleccionado vs benchmark
         fig_asset = go.Figure()
