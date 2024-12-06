@@ -194,6 +194,8 @@ pesos_input = st.sidebar.text_input(
 simbolos = [s.strip() for s in simbolos_input.split(',') if s.strip() in etfs_permitidos]
 pesos = [float(w.strip()) for w in pesos_input.split(',')]
 
+ df_stocks = obtener_datos_acciones(simbolos, start_date, end_date)
+
 # Obtener tasa de cambio USD/MXN
 tasa_cambio_usd_mxn = obtener_tasa_cambio_usd_mxn(start_date, end_date)
 
