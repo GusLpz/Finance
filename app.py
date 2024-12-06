@@ -136,6 +136,31 @@ def calcular_minima_varianza(returns):
     
     return result.x  # Retorna los pesos óptimos
 
+#Portafolio Maximo Sharpe Ratio
+def calcular_maximo_sharpe(returns, risk_free_rate=0.02):
+    n = returns.shape[1]
+    
+    # Función objetivo: maximizar el Sharpe Ratio
+    def negative_sharpe_ratio(weights):
+        portfolio_return = np.dot(weights, returns.mean()) * 252
+        portfolio_std = np.sqrt(np.dot(weights.T, np.dot(returns.cov() * 252, weights)))
+        sharpe_ratio = (portfolio_return - risk_free_rate) / portfolio_std
+        return -sharpe_ratio  # Negativo para maximización
+    
+    # Restricciones: los pesos deben sumar 1
+    constraints = ({'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1})
+    
+    # Límites: los pesos deben estar entre 0 y 1
+    bounds = tuple((0, 1) for _ in range(n))
+    
+    # Pesos iniciales iguales
+    initial_weights = np.array([1 / n] * n)
+    
+    # Optimización
+    result = minimize(negative_sharpe_ratio, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+    
+    return result.x  #
+
 # ETFs permitidos y datos
 etfs_permitidos = ["IEI", "EMB", "SPY", "IEMG", "GLD"]
 start_date = "2010-01-01"
@@ -177,7 +202,7 @@ else:
     portfolio_cumulative_returns = (1 + portfolio_returns).cumprod() - 1
 
     # Crear pestañas
-    tab1, tab2, tab3 = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio", "Portafolio Mínima Varianza"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio", "Portafolio Mínima Varianza", "Portafolio Max Sharpe Ratio"])
 
     etf_summaries = {
         "IEI": {
@@ -486,6 +511,70 @@ with tab3:
         var_95,
         cvar_95,
         title="Distribución de Retornos del Portafolio de Mínima Varianza"
+    )
+    st.plotly_chart(fig_dist, use_container_width=True)
+
+with tab4:
+    st.header("Análisis del Portafolio de Máximo Sharpe Ratio")
+    
+    # Calcular los pesos óptimos
+    max_sharpe_weights = calcular_maximo_sharpe(returns[simbolos])
+    
+    # Calcular métricas del portafolio de máximo Sharpe Ratio
+    max_sharpe_returns = calcular_rendimientos_portafolio(returns[simbolos], max_sharpe_weights)
+    max_sharpe_cumulative = (1 + max_sharpe_returns).cumprod() - 1
+    max_sharpe_risk = np.sqrt(252) * max_sharpe_returns.std()
+    max_sharpe_mean_return = max_sharpe_returns.mean() * 252  # Anualizado
+    max_sharpe_ratio = (max_sharpe_mean_return - risk_free_rate) / max_sharpe_risk
+    
+    st.subheader("Pesos del Portafolio de Máximo Sharpe Ratio")
+    weights_df = pd.DataFrame({
+        "ETF": simbolos,
+        "Peso Óptimo": max_sharpe_weights
+    })
+    st.dataframe(weights_df.style.format({"Peso Óptimo": "{:.2%}"}))
+    
+    # Mostrar métricas clave
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Riesgo (Desviación Estándar Anualizada)", f"{max_sharpe_risk:.2%}")
+    col2.metric("Rendimiento Esperado Anualizado", f"{max_sharpe_mean_return:.2%}")
+    col3.metric("Sharpe Ratio", f"{max_sharpe_ratio:.2f}")
+    
+    # Comparar rendimientos acumulados
+    fig_cumulative = go.Figure()
+    fig_cumulative.add_trace(go.Scatter(
+        x=max_sharpe_cumulative.index, 
+        y=max_sharpe_cumulative, 
+        name="Portafolio de Máximo Sharpe Ratio",
+        line=dict(color='gold')
+    ))
+    fig_cumulative.add_trace(go.Scatter(
+        x=portfolio_cumulative_returns.index, 
+        y=portfolio_cumulative_returns, 
+        name="Portafolio Actual",
+        line=dict(color='orange', dash='dot')
+    ))
+    fig_cumulative.add_trace(go.Scatter(
+        x=cumulative_returns.index, 
+        y=cumulative_returns[benchmark], 
+        name=f"Benchmark: {selected_benchmark}",
+        line=dict(color='green', dash='dash')
+    ))
+    fig_cumulative.update_layout(
+        title="Comparación de Rendimientos Acumulados",
+        xaxis_title="Fecha",
+        yaxis_title="Rendimientos Acumulados",
+        plot_bgcolor='rgba(240,240,240,1)'
+    )
+    st.plotly_chart(fig_cumulative, use_container_width=True)
+    
+    # Distribución de rendimientos del portafolio de máximo Sharpe Ratio
+    var_95, cvar_95 = calcular_var_cvar(max_sharpe_returns)
+    fig_dist = crear_histograma_distribucion(
+        max_sharpe_returns,
+        var_95,
+        cvar_95,
+        title="Distribución de Retornos del Portafolio de Máximo Sharpe Ratio"
     )
     st.plotly_chart(fig_dist, use_container_width=True)
        
