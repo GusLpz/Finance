@@ -265,7 +265,7 @@ with tab1:
     col7, col8, col9 = st.columns(3)
     col7.metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
     col8.metric("Exceso de Curtosis", f"{exceso_curtosis:.3f}")  # Nueva métrica
-    col9.metric("DrowDown", f"{drowdown:.2f}")  # Nueva métrica
+    col9.metric("DrowDown", f"{drowdown:.4f}")  # Nueva métrica
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
