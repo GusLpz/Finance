@@ -7,6 +7,80 @@ import numpy as np
 from datetime import datetime, timedelta
 from scipy.optimize import minimize
 
+# Función para calcular el rendimiento anualizado
+def calcular_rendimiento_anualizado(returns):
+    return (1 + returns.mean())**252 - 1
+
+# Función para calcular la volatilidad anualizada
+def calcular_volatilidad_anualizada(returns):
+    return returns.std() * np.sqrt(252)
+
+# Función para calcular el Sharpe Ratio anualizado
+def calcular_sharpe_ratio_anualizado(returns, risk_free_rate=0.02):
+    excess_returns = returns.mean() - (risk_free_rate / 252)
+    return excess_returns / returns.std() * np.sqrt(252)
+
+# Función objetivo para minimizar la volatilidad
+def minimizar_volatilidad(pesos, returns):
+    portfolio_returns = (returns * pesos).sum(axis=1)
+    return calcular_volatilidad_anualizada(portfolio_returns)
+
+# Función objetivo para maximizar el ratio de Sharpe
+def maximizar_sharpe(pesos, returns, risk_free_rate=0.02):
+    portfolio_returns = (returns * pesos).sum(axis=1)
+    return -calcular_sharpe_ratio_anualizado(portfolio_returns, risk_free_rate)
+
+# Función para minimizar volatilidad con un objetivo de rendimiento
+def volatilidad_con_objetivo(pesos, returns, target_return):
+    portfolio_returns = (returns * pesos).sum(axis=1)
+    rendimiento_anualizado = calcular_rendimiento_anualizado(portfolio_returns)
+    volatilidad = calcular_volatilidad_anualizada(portfolio_returns)
+    return volatilidad if rendimiento_anualizado >= target_return else np.inf
+
+# Función para optimizar portafolios
+def optimizar_portafolio(returns, target_return=None, risk_free_rate=0.02):
+    n = returns.shape[1]
+    pesos_iniciales = np.ones(n) / n
+    limites = [(0, 1) for _ in range(n)]
+    restricciones = [{"type": "eq", "fun": lambda pesos: np.sum(pesos) - 1}]
+    
+    if target_return is None:
+        # Optimizar para mínima volatilidad
+        resultado_volatilidad = minimize(
+            minimizar_volatilidad,
+            pesos_iniciales,
+            args=(returns,),
+            method="SLSQP",
+            bounds=limites,
+            constraints=restricciones
+        )
+        
+        # Optimizar para máximo Sharpe
+        resultado_sharpe = minimize(
+            maximizar_sharpe,
+            pesos_iniciales,
+            args=(returns, risk_free_rate),
+            method="SLSQP",
+            bounds=limites,
+            constraints=restricciones
+        )
+        return resultado_volatilidad.x, resultado_sharpe.x
+    else:
+        # Optimizar para mínima volatilidad con un rendimiento objetivo
+        restricciones.append({
+            "type": "ineq",
+            "fun": lambda pesos: calcular_rendimiento_anualizado((returns * pesos).sum(axis=1)) - target_return
+        })
+        
+        resultado_target = minimize(
+            minimizar_volatilidad,
+            pesos_iniciales,
+            args=(returns,),
+            method="SLSQP",
+            bounds=limites,
+            constraints=restricciones
+        )
+        return resultado_target.x
 
 # Funciones auxiliares
 def obtener_datos_acciones(simbolos, start_date, end_date):
@@ -172,7 +246,7 @@ else:
     portfolio_cumulative_returns = (1 + portfolio_returns).cumprod() - 1
 
     # Crear pestañas
-    tab1, tab2 = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio"])
+    tab1, tab2, tab3, = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio", "Portafolios Optimos"])
 
     # Diccionario de resúmenes de los ETFs
     etf_summaries = {
@@ -337,7 +411,7 @@ else:
         st.subheader("Distribución de Retornos del Portafolio vs Benchmark")
         
         col1, col2 = st.columns(2)
-        
+            
         with col1:
             # Histograma para el portafolio
             var_port, cvar_port = calcular_var_cvar(portfolio_returns)
@@ -417,3 +491,30 @@ else:
         fig_comparison.update_layout(title='Comparación de Rendimientos', xaxis_title='Días', yaxis_title='Rendimiento', barmode='group')
         # Gráfico de comparación de rendimientos
         st.plotly_chart(fig_comparison, use_container_width=True, key="returns_comparison")
+
+
+        with tab3: 
+            st.header("Portafolios Óptimos")
+            if '2010-01-01' <= start_date.strftime('%Y-%m-%d') <= '2020-12-31':
+            # Filtrar datos de 2010 a 2020
+            returns_2010_2020 = returns[simbolos]['2010-01-01':'2020-12-31']
+            
+            # Convertir a pesos mexicanos (USD/MXN ajustado)
+            fx_usd_mxn = yf.download('MXN=X', start='2010-01-01', end='2020-12-31')['Close']
+            returns_2010_2020_mxn = returns_2010_2020.mul(fx_usd_mxn, axis=0)
+            
+            # Optimizar portafolios
+            pesos_volatilidad, pesos_sharpe = optimizar_portafolio(returns_2010_2020_mxn)
+            pesos_target = optimizar_portafolio(returns_2010_2020_mxn, target_return=0.10)
+            
+            # Mostrar resultados en un DataFrame
+            resultados_portafolios = pd.DataFrame({
+                "ETF": simbolos,
+                "Mínima Volatilidad": pesos_volatilidad,
+                "Máximo Sharpe": pesos_sharpe,
+                "Volatilidad con Objetivo (10%)": pesos_target
+            })
+            st.subheader("Portafolios Óptimos (2010-2020 en MXN)")
+            st.dataframe(resultados_portafolios.style.format("{:.2%}"))
+            
+            
