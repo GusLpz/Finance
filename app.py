@@ -134,7 +134,7 @@ def calcular_minima_varianza(returns):
     # Optimización
     result = minimize(portfolio_variance, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
     
-    return result.x  # Retorna los pesos óptimos
+    return result  # Retorna los pesos óptimos
 
 # ETFs permitidos y datos
 etfs_permitidos = ["IEI", "EMB", "SPY", "IEMG", "GLD"]
