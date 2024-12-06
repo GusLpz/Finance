@@ -17,12 +17,6 @@ def calcular_metricas(df):
     normalized_prices = df / df.iloc[0] * 100
     return returns, cumulative_returns, normalized_prices
 
-def calcular_sesgo(df):
-    return df.skew()
-    
-def calcular_exceso_curtosis(returns):
-    return returns.kurtosis()
-
 def calcular_rendimientos_portafolio(returns, weights):
     return (returns * weights).sum(axis=1)
 
@@ -38,7 +32,7 @@ def calcular_beta(asset_returns, market_returns):
 
 def calcular_sharpe_ratio(returns, risk_free_rate=0.02):
     excess_returns = returns - risk_free_rate / 252
-    return np.sqrt(252) * excess_returns.mean() / excess_returns.std()   
+    return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
 
 def calcular_sortino_ratio(returns, risk_free_rate=0.02, target_return=0):
     excess_returns = returns - risk_free_rate / 252
@@ -120,7 +114,7 @@ st.set_page_config(page_title="Analizador de Portafolio", layout="wide")
 st.sidebar.title("Analizador de Portafolio de Inversión")
 
 # Entrada de símbolos y pesos
-simbolos_input = st.sidebar.text_input("Ingrese los símbolos de las acciones separados por comas (por ejemplo: AAPL,GOOGL,MSFT):", "IEI,EMB,SPY,IEMG,GLD")
+simbolos_input = st.sidebar.text_input("Ingrese los símbolos de las acciones separados por comas (por ejemplo: AAPL,GOOGL,MSFT):", "AAPL,GOOGL,MSFT,AMZN,NVDA")
 pesos_input = st.sidebar.text_input("Ingrese los pesos correspondientes separados por comas (deben sumar 1):", "0.2,0.2,0.2,0.2,0.2")
 
 simbolos = [s.strip() for s in simbolos_input.split(',')]
@@ -146,8 +140,7 @@ start_date_options = {
     "1 año": end_date - timedelta(days=365),
     "3 años": end_date - timedelta(days=3*365),
     "5 años": end_date - timedelta(days=5*365),
-    "10 años": end_date - timedelta(days=10*365),
-    "2010-2023": datetime(2010, 1, 1) - datetime(2023,12,31)
+    "10 años": end_date - timedelta(days=10*365)
 }
 selected_window = st.sidebar.selectbox("Seleccione la ventana de tiempo para el análisis:", list(start_date_options.keys()))
 start_date = start_date_options[selected_window]
@@ -167,132 +160,59 @@ else:
     # Crear pestañas
     tab1, tab2 = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio"])
 
-    # Diccionario de resúmenes de los ETFs
-etf_summaries = {
-    "IEI": {
-        "nombre": "iShares 3-7 Year Treasury Bond ETF",
-        "exposicion": "Bonos del Tesoro de EE. UU. con vencimientos entre 3 y 7 años",
-        "indice": "ICE U.S. Treasury 3-7 Year Bond Index",
-        "moneda": "USD",
-        "pais": "Estados Unidos",
-        "estilo": "Renta fija desarrollada",
-        "costos": "0.15%",
-    },
-    "EMB": {
-        "nombre": "iShares J.P. Morgan USD Emerging Markets Bond ETF",
-        "exposicion": "Bonos soberanos y cuasi-soberanos de mercados emergentes",
-        "indice": "J.P. Morgan EMBI Global Core Index",
-        "moneda": "USD",
-        "pais": "Diversos mercados emergentes (Brasil, México, Sudáfrica, etc.)",
-        "estilo": "Renta fija emergente",
-        "costos": "0.39%",
-    },
-    "SPY": {
-        "nombre": "SPDR S&P 500 ETF Trust",
-        "exposicion": "500 empresas más grandes de Estados Unidos",
-        "indice": "S&P 500 Index",
-        "moneda": "USD",
-        "pais": "Estados Unidos",
-        "estilo": "Renta variable desarrollada",
-        "costos": "0.09%",
-    },
-    "IEMG": {
-        "nombre": "iShares Core MSCI Emerging Markets ETF",
-        "exposicion": "Empresas de gran y mediana capitalización en mercados emergentes",
-        "indice": "MSCI Emerging Markets Investable Market Index",
-        "moneda": "USD",
-        "pais": "China, India, Brasil, y otros mercados emergentes",
-        "estilo": "Renta variable emergente",
-        "costos": "0.11%",
-    },
-    "GLD": {
-        "nombre": "SPDR Gold Shares",
-        "exposicion": "Precio del oro físico (lingotes almacenados en bóvedas)",
-        "indice": "Precio spot del oro",
-        "moneda": "USD",
-        "pais": "Exposición global",
-        "estilo": "Materias primas",
-        "costos": "0.40%",
-    },
-}
-
-# Modificación en el Tab 1
-with tab1:
-    st.header("Análisis de Activos Individuales")
-    
-    selected_asset = st.selectbox("Seleccione un activo para analizar:", simbolos)
-    
-    # Mostrar resumen del ETF
-    if selected_asset in etf_summaries:
-        st.subheader(f"Resumen del ETF: {selected_asset}")
-        summary = etf_summaries[selected_asset]
-        st.markdown(f"""
-        - **Nombre:** {summary['nombre']}
-        - **Exposición:** {summary['exposicion']}
-        - **Índice que sigue:** {summary['indice']}
-        - **Moneda de denominación:** {summary['moneda']}
-        - **País o región principal:** {summary['pais']}
-        - **Estilo:** {summary['estilo']}
-        - **Costos:** {summary['costos']}
-        """)
-    
-    # Calcular VaR y CVaR para el activo seleccionado
-    var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
-    sesgo = calcular_sesgo(returns[selected_asset])
-    exceso_curtosis = calcular_exceso_curtosis(returns[selected_asset]) 
-   
-    
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Rendimiento Total", f"{cumulative_returns[selected_asset].iloc[-1]:.2%}")
-    col2.metric("Sharpe Ratio", f"{calcular_sharpe_ratio(returns[selected_asset]):.2f}")
-    col3.metric("Sortino Ratio", f"{calcular_sortino_ratio(returns[selected_asset]):.2f}")
-    
-    col4, col5, col6 = st.columns(3)
-    col4.metric("VaR 95%", f"{var_95:.2%}")
-    col5.metric("CVaR 95%", f"{cvar_95:.2%}")
-    col6.metric("Media Retornos", f"{round(returns[selected_asset].mean(),7):.3%}")
-
-    col7, col8 = st.columns(2)
-    col7.metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
-    col8.metric("Exceso de Curtosis", f"{exceso_curtosis:.3f}")  
-    
-    # Gráfico de precio normalizado del activo seleccionado vs benchmark
-    fig_asset = go.Figure()
-    fig_asset.add_trace(go.Scatter(x=normalized_prices.index, y=normalized_prices[selected_asset], name=selected_asset))
-    fig_asset.add_trace(go.Scatter(x=normalized_prices.index, y=normalized_prices[benchmark], name=selected_benchmark))
-    fig_asset.update_layout(title=f'Precio Normalizado: {selected_asset} vs {selected_benchmark} (Base 100)', xaxis_title='Fecha', yaxis_title='Precio Normalizado')
-    st.plotly_chart(fig_asset, use_container_width=True, key="price_normalized")
-    
-    # Beta del activo vs benchmark
-    beta_asset = calcular_beta(returns[selected_asset], returns[benchmark])
-    st.metric(f"Beta vs {selected_benchmark}", f"{beta_asset:.2f}")
-    
-    st.subheader(f"Distribución de Retornos: {selected_asset} vs {selected_benchmark}")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Histograma para el activo seleccionado
-        var_asset, cvar_asset = calcular_var_cvar(returns[selected_asset])
-        fig_hist_asset = crear_histograma_distribucion(
-            returns[selected_asset],
-            var_asset,
-            cvar_asset,
-            f'Distribución de Retornos - {selected_asset}'
-        )
-        st.plotly_chart(fig_hist_asset, use_container_width=True, key="hist_asset")
+    with tab1:
+        st.header("Análisis de Activos Individuales")
         
-    with col2:
-        # Histograma para el benchmark
-        var_bench, cvar_bench = calcular_var_cvar(returns[benchmark])
-        fig_hist_bench = crear_histograma_distribucion(
-            returns[benchmark],
-            var_bench,
-            cvar_bench,
-            f'Distribución de Retornos - {selected_benchmark}'
-        )
-        st.plotly_chart(fig_hist_bench, use_container_width=True, key="hist_bench_1")
+        selected_asset = st.selectbox("Seleccione un activo para analizar:", simbolos)
+        
+        # Calcular VaR y CVaR para el activo seleccionado
+        var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
+        
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Rendimiento Total", f"{cumulative_returns[selected_asset].iloc[-1]:.2%}")
+        col2.metric("Sharpe Ratio", f"{calcular_sharpe_ratio(returns[selected_asset]):.2f}")
+        col3.metric("Sortino Ratio", f"{calcular_sortino_ratio(returns[selected_asset]):.2f}")
+        
+        col4, col5 = st.columns(2)
+        col4.metric("VaR 95%", f"{var_95:.2%}")
+        col5.metric("CVaR 95%", f"{cvar_95:.2%}")
+        
+        # Gráfico de precio normalizado del activo seleccionado vs benchmark
+        fig_asset = go.Figure()
+        fig_asset.add_trace(go.Scatter(x=normalized_prices.index, y=normalized_prices[selected_asset], name=selected_asset))
+        fig_asset.add_trace(go.Scatter(x=normalized_prices.index, y=normalized_prices[benchmark], name=selected_benchmark))
+        fig_asset.update_layout(title=f'Precio Normalizado: {selected_asset} vs {selected_benchmark} (Base 100)', xaxis_title='Fecha', yaxis_title='Precio Normalizado')
+        st.plotly_chart(fig_asset, use_container_width=True, key="price_normalized")
+        
+        # Beta del activo vs benchmark
+        beta_asset = calcular_beta(returns[selected_asset], returns[benchmark])
+        st.metric(f"Beta vs {selected_benchmark}", f"{beta_asset:.2f}")
+        
+        st.subheader(f"Distribución de Retornos: {selected_asset} vs {selected_benchmark}")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Histograma para el activo seleccionado
+            var_asset, cvar_asset = calcular_var_cvar(returns[selected_asset])
+            fig_hist_asset = crear_histograma_distribucion(
+                returns[selected_asset],
+                var_asset,
+                cvar_asset,
+                f'Distribución de Retornos - {selected_asset}'
+            )
+            st.plotly_chart(fig_hist_asset, use_container_width=True, key="hist_asset")
+            
+        with col2:
+            # Histograma para el benchmark
+            var_bench, cvar_bench = calcular_var_cvar(returns[benchmark])
+            fig_hist_bench = crear_histograma_distribucion(
+                returns[benchmark],
+                var_bench,
+                cvar_bench,
+                f'Distribución de Retornos - {selected_benchmark}'
+            )
+            st.plotly_chart(fig_hist_bench, use_container_width=True, key="hist_bench_1")
 
 
     with tab2:
