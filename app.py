@@ -245,7 +245,7 @@ else:
         col2.metric("Sharpe Ratio", f"{calcular_sharpe_ratio(returns[selected_asset]):.2f}")
         col3.metric("Sortino Ratio", f"{calcular_sortino_ratio(returns[selected_asset]):.2f}")
         
-        col4, col5 = st.columns(3)
+        col4, col5, col6 = st.columns(3)
         col4.metric("VaR 95%", f"{var_95:.2%}")
         col5.metric("CVaR 95%", f"{cvar_95:.2%}")
         col6.metric("Media Retornos", f"{returns[selected_asset].mean():.2f}")
