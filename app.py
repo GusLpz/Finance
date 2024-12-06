@@ -259,7 +259,6 @@ with tab1:
     var_95, cvar_95 = calcular_var_cvar(returns[selected_asset])
     sesgo = calcular_sesgo(returns[selected_asset])
     exceso_curtosis = calcular_exceso_curtosis(returns[selected_asset]) 
-    comReturns = calcular_metricas(returns[selected_asset])
     drowdown = calcular_drawdown_diario(returns[selected_asset])
     
 
