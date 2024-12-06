@@ -328,7 +328,7 @@ else:
         col4, col5, col6 = st.columns(3)
         col4.metric("VaR 95%", f"{var_95:.2%}")
         col5.metric("CVaR 95%", f"{cvar_95:.2%}")
-        col6.metric("Media Retornos", f"{returns[selected_asset].mean():.2f}")
+        col6.metric("Media Retornos", f"{returns[selected_asset].mean():.2%}")
         
         col7, col8, col9 = st.columns(3)
         col7.metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
