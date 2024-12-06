@@ -38,49 +38,47 @@ def volatilidad_con_objetivo(pesos, returns, target_return):
     return volatilidad if rendimiento_anualizado >= target_return else np.inf
 
 # Función para optimizar portafolios
-def optimizar_portafolio(returns, target_return=None, risk_free_rate=0.02):
+def optimizar_portafolio(returns, target_return=0.1, risk_free_rate=0.02):
     n = returns.shape[1]
     pesos_iniciales = np.ones(n) / n
     limites = [(0, 1) for _ in range(n)]
     restricciones = [{"type": "eq", "fun": lambda pesos: np.sum(pesos) - 1}]
     
-    if target_return is None:
-        # Optimizar para mínima volatilidad
-        resultado_volatilidad = minimize(
-            minimizar_volatilidad,
-            pesos_iniciales,
-            args=(returns,),
-            method="SLSQP",
-            bounds=limites,
-            constraints=restricciones
-        )
+    # Optimizar para mínima volatilidad
+    resultado_volatilidad = minimize(
+        minimizar_volatilidad,
+        pesos_iniciales,
+        args=(returns,),
+        method="SLSQP",
+        bounds=limites,
+        constraints=restricciones
+    )
         
-        # Optimizar para máximo Sharpe
-        resultado_sharpe = minimize(
-            maximizar_sharpe,
-            pesos_iniciales,
-            args=(returns, risk_free_rate),
-            method="SLSQP",
-            bounds=limites,
-            constraints=restricciones
-        )
-        return resultado_volatilidad.x, resultado_sharpe.x
-    else:
-        # Optimizar para mínima volatilidad con un rendimiento objetivo
-        restricciones.append({
-            "type": "ineq",
-            "fun": lambda pesos: calcular_rendimiento_anualizado((returns * pesos).sum(axis=1)) - target_return
-        })
-        
-        resultado_target = minimize(
-            minimizar_volatilidad,
-            pesos_iniciales,
-            args=(returns,),
-            method="SLSQP",
-            bounds=limites,
-            constraints=restricciones
-        )
-        return resultado_target.x
+    # Optimizar para máximo Sharpe
+    resultado_sharpe = minimize(
+        maximizar_sharpe,
+        pesos_iniciales,
+        args=(returns, risk_free_rate),
+        method="SLSQP",
+        bounds=limites,
+        constraints=restricciones
+    )
+       
+    # Optimizar para mínima volatilidad con un rendimiento objetivo
+    restricciones.append({
+        "type": "ineq",
+        "fun": lambda pesos: calcular_rendimiento_anualizado((returns * pesos).sum(axis=1)) - target_return
+    })
+    
+    resultado_target = minimize(
+        minimizar_volatilidad,
+        pesos_iniciales,
+        args=(returns,),
+        method="SLSQP",
+        bounds=limites,
+        constraints=restricciones
+    )
+    return resultado_volatilidad.x, resultado_sharpe.x, resultado_target.x
 
 # Funciones auxiliares
 def obtener_datos_acciones(simbolos, start_date, end_date):
@@ -504,8 +502,8 @@ else:
             returns_2010_2020_mxn = returns_2010_2020.mul(fx_usd_mxn, axis=0)
             
             # Optimizar portafolios
-            pesos_volatilidad, pesos_sharpe = optimizar_portafolio(returns_2010_2020_mxn)
-            pesos_target = optimizar_portafolio(returns_2010_2020_mxn, target_return=0.10)
+            pesos_volatilidad, pesos_sharpe, pesos_target = optimizar_portafolio(returns_2010_2020_mxn)
+            
             
             # Crear el DataFrame solo si las longitudes coinciden
             if len(pesos_volatilidad) == len(simbolos) and len(pesos_sharpe) == len(simbolos) and len(pesos_target) == len(simbolos):
