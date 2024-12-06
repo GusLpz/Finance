@@ -39,9 +39,8 @@ def volatilidad_con_objetivo(pesos, returns, target_return):
 
 # Función para optimizar portafolios
 def optimizar_portafolio(returns, target_return=0.1, risk_free_rate=0.02):
-    n = returns.shape[1]
-    pesos_iniciales = np.ones(n) / n
-    limites = [(0, 1) for _ in range(n)]
+    pesos_iniciales = [0.2,0.2,0.2,0.2,0.2]
+    limites = [(0, 1) for _ in range(len(pesos_iniciales))]
     restricciones = [{"type": "eq", "fun": lambda pesos: np.sum(pesos) - 1}]
     
     # Optimizar para mínima volatilidad
