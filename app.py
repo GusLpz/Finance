@@ -651,7 +651,7 @@ with tab5:
     
     try:
         # Calcular los pesos óptimos
-        min_vol_weights_mxn = calcular_minima_volatilidad_objetivo(returns_mxn, rendimiento_objetivo_anual)
+        min_vol_weights_mxn = calcular_minima_volatilidad_objetivo(returns_mxnn, rendimiento_objetivo_anual)
         
         # Calcular métricas del portafolio
         min_vol_returns_mxn = calcular_rendimientos_portafolio(returns_mxnn, min_vol_weights_mxn)
