@@ -114,6 +114,28 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
     )
     return fig
 
+def calcular_minima_varianza(returns):
+    n = returns.shape[1]
+    
+    # Función objetivo: minimizar la varianza
+    def portfolio_variance(weights):
+        cov_matrix = returns.cov()
+        return np.dot(weights.T, np.dot(cov_matrix, weights))
+    
+    # Restricciones: los pesos deben sumar 1
+    constraints = ({'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1})
+    
+    # Límites: los pesos deben estar entre 0 y 1
+    bounds = tuple((0, 1) for _ in range(n))
+    
+    # Pesos iniciales iguales
+    initial_weights = np.array([1 / n] * n)
+    
+    # Optimización
+    result = minimize(portfolio_variance, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+    
+    return result.x  # Retorna los pesos óptimos
+
 # ETFs permitidos y datos
 etfs_permitidos = ["IEI", "EMB", "SPY", "IEMG", "GLD"]
 start_date = "2010-01-01"
@@ -401,4 +423,69 @@ else:
         fig_comparison.update_layout(title='Comparación de Rendimientos', xaxis_title='Días', yaxis_title='Rendimiento', barmode='group')
         # Gráfico de comparación de rendimientos
         st.plotly_chart(fig_comparison, use_container_width=True, key="returns_comparison")
+
+# Crear nueva pestaña para análisis de portafolio de mínima varianza
+tab3 = st.tabs(["Portafolio de Mínima Varianza"])[0]
+
+with tab3:
+    st.header("Análisis del Portafolio de Mínima Varianza")
+    
+    # Calcular los pesos óptimos
+    min_var_weights = calcular_minima_varianza(returns[simbolos])
+    
+    # Calcular métricas del portafolio de mínima varianza
+    min_var_returns = calcular_rendimientos_portafolio(returns[simbolos], min_var_weights)
+    min_var_cumulative = (1 + min_var_returns).cumprod() - 1
+    min_var_risk = np.sqrt(252) * min_var_returns.std()
+    min_var_mean_return = min_var_returns.mean() * 252  # Anualizado
+    
+    st.subheader("Pesos del Portafolio de Mínima Varianza")
+    weights_df = pd.DataFrame({
+        "ETF": simbolos,
+        "Peso Óptimo": min_var_weights
+    })
+    st.dataframe(weights_df.style.format({"Peso Óptimo": "{:.2%}"}))
+    
+    # Mostrar métricas clave
+    col1, col2 = st.columns(2)
+    col1.metric("Riesgo (Desviación Estándar Anualizada)", f"{min_var_risk:.2%}")
+    col2.metric("Rendimiento Esperado Anualizado", f"{min_var_mean_return:.2%}")
+    
+    # Comparar rendimientos acumulados
+    fig_cumulative = go.Figure()
+    fig_cumulative.add_trace(go.Scatter(
+        x=min_var_cumulative.index, 
+        y=min_var_cumulative, 
+        name="Portafolio de Mínima Varianza",
+        line=dict(color='royalblue')
+    ))
+    fig_cumulative.add_trace(go.Scatter(
+        x=portfolio_cumulative_returns.index, 
+        y=portfolio_cumulative_returns, 
+        name="Portafolio Actual",
+        line=dict(color='orange', dash='dot')
+    ))
+    fig_cumulative.add_trace(go.Scatter(
+        x=cumulative_returns.index, 
+        y=cumulative_returns[benchmark], 
+        name=f"Benchmark: {selected_benchmark}",
+        line=dict(color='green', dash='dash')
+    ))
+    fig_cumulative.update_layout(
+        title="Comparación de Rendimientos Acumulados",
+        xaxis_title="Fecha",
+        yaxis_title="Rendimientos Acumulados",
+        plot_bgcolor='rgba(240,240,240,1)'
+    )
+    st.plotly_chart(fig_cumulative, use_container_width=True)
+    
+    # Distribución de rendimientos del portafolio de mínima varianza
+    var_95, cvar_95 = calcular_var_cvar(min_var_returns)
+    fig_dist = crear_histograma_distribucion(
+        min_var_returns,
+        var_95,
+        cvar_95,
+        title="Distribución de Retornos del Portafolio de Mínima Varianza"
+    )
+    st.plotly_chart(fig_dist, use_container_width=True)
        
