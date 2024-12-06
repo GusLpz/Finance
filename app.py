@@ -77,7 +77,7 @@ def optimizar_portafolio(returns, target_return=0.1, risk_free_rate=0.02):
         bounds=limites,
         constraints=restricciones
     )
-    return resultado_volatilidad.x, resultado_sharpe.x, resultado_target.x
+    return resultado_volatilidad, resultado_sharpe, resultado_target
 
 # Funciones auxiliares
 def obtener_datos_acciones(simbolos, start_date, end_date):
