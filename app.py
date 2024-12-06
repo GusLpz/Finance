@@ -212,7 +212,7 @@ else:
         "pais": "Exposición global",
         "estilo": "Materias primas",
         "costos": "0.40%",
-    },
+    }
     }
 
 
