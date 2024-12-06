@@ -193,6 +193,34 @@ def calcular_minima_volatilidad_objetivo(returns_mxn, target_return):
         return result.x  # Pesos óptimos
     else:
         raise ValueError("No se pudo encontrar una solución para el portafolio de mínima volatilidad.")
+        
+def calcular_returns_mxn(etfs, start_date="2010-01-01", end_date="2020-12-31"):
+    """
+    Calcula los retornos de los ETFs ajustados a pesos mexicanos (MXN) para un rango de fechas dado.
+
+    Args:
+        etfs (list): Lista de símbolos de los ETFs.
+        start_date (str): Fecha de inicio en formato "YYYY-MM-DD".
+        end_date (str): Fecha de fin en formato "YYYY-MM-DD".
+
+    Returns:
+        pd.DataFrame: Retornos diarios ajustados a MXN.
+    """
+    # Descargar datos de precios de los ETFs en USD
+    df_stocks = yf.download(etfs, start=start_date, end=end_date)['Close']
+    df_stocks = df_stocks.ffill().dropna()
+
+    # Descargar tasas de cambio USD/MXN
+    tasa_cambio_usd_mxn = yf.download("USDMXN=X", start=start_date, end=end_date)['Close']
+    tasa_cambio_usd_mxn = tasa_cambio_usd_mxn.ffill().dropna()
+
+    # Ajustar precios a pesos mexicanos
+    df_stocks_mxn = df_stocks.multiply(tasa_cambio_usd_mxn, axis=0)
+
+    # Calcular los retornos diarios
+    returns_mxn = df_stocks_mxn.pct_change().dropna()
+
+    return returns_mxn
 
 
 # ETFs permitidos y datos
@@ -618,13 +646,15 @@ with tab5:
     
     # Definir objetivo de rendimiento anual
     rendimiento_objetivo_anual = 0.10  # 10%
+
+    returns_mxnn = calcular_returns_mxn(etfs_permitidos)
     
     try:
         # Calcular los pesos óptimos
         min_vol_weights_mxn = calcular_minima_volatilidad_objetivo(returns_mxn, rendimiento_objetivo_anual)
         
         # Calcular métricas del portafolio
-        min_vol_returns_mxn = calcular_rendimientos_portafolio(returns_mxn, min_vol_weights_mxn)
+        min_vol_returns_mxn = calcular_rendimientos_portafolio(returns_mxnn, min_vol_weights_mxn)
         min_vol_cumulative_mxn = (1 + min_vol_returns_mxn).cumprod() - 1
         min_vol_risk_mxn = np.sqrt(252) * min_vol_returns_mxn.std()
         min_vol_mean_return_mxn = min_vol_returns_mxn.mean() * 252  # Anualizado
