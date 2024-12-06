@@ -554,6 +554,7 @@ with tab4:
     max_sharpe_cumulative_mxn = (1 + max_sharpe_returns_mxn).cumprod() - 1
     max_sharpe_risk_mxn = np.sqrt(252) * max_sharpe_returns_mxn.std()
     max_sharpe_mean_return_mxn = max_sharpe_returns_mxn.mean() * 252  # Anualizado
+    risk_free_rate = 0.05
     max_sharpe_ratio_mxn = (max_sharpe_mean_return_mxn - risk_free_rate) / max_sharpe_risk_mxn
     
     st.subheader("Pesos del Portafolio de Máximo Sharpe Ratio (MXN)")
