@@ -490,40 +490,4 @@ else:
         st.plotly_chart(fig_comparison, use_container_width=True, key="returns_comparison")
 
 
-        with tab3: 
-            st.header("Portafolios Óptimos")
-            
-            # Filtrar datos de 2010 a 2020
-
-            start_date="2010-01-01"
-            end_date="2020-12-31"
-
-            precios = yf.download(simbolos, start=start_date, end=end_date)['Close']
-            precios = precios.ffill().dropna()  # Rellenar valores faltantes y eliminar filas vacías
-
-            # Calcular retornos diarios
-            retornos = precios.pct_change().dropna()
-            
-            # Convertir a pesos mexicanos (USD/MXN ajustado)
-            fx_usd_mxn = yf.download('MXN=X', start='2010-01-01', end='2020-12-31')['Close']
-            returns_2010_2020_mxn = returns_2010_2020.mul(fx_usd_mxn, axis=0)
-            
-            # Optimizar portafolios
-            pesos_volatilidad, pesos_sharpe, pesos_target = optimizar_portafolio(returns_2010_2020_mxn)
-            
-            
-            # Crear el DataFrame solo si las longitudes coinciden
-            if len(pesos_volatilidad) == len(simbolos) and len(pesos_sharpe) == len(simbolos) and len(pesos_target) == len(simbolos):
-                resultados_portafolios = pd.DataFrame({
-                    "ETF": simbolos,
-                    "Mínima Volatilidad": pesos_volatilidad,
-                    "Máximo Sharpe": pesos_sharpe,
-                    "Volatilidad con Objetivo (10%)": pesos_target
-                })
-                st.subheader("Portafolios Óptimos (2010-2020 en MXN)")
-                st.dataframe(resultados_portafolios.style.format("{:.2%}"))
-            else:
-                st.error("Error: Los pesos optimizados no coinciden con el número de activos.")
-
-            
-            
+        
