@@ -525,6 +525,7 @@ with tab4:
     max_sharpe_cumulative = (1 + max_sharpe_returns).cumprod() - 1
     max_sharpe_risk = np.sqrt(252) * max_sharpe_returns.std()
     max_sharpe_mean_return = max_sharpe_returns.mean() * 252  # Anualizado
+    risk_free_rate = 0.02
     max_sharpe_ratio = (max_sharpe_mean_return - risk_free_rate) / max_sharpe_risk
     
     st.subheader("Pesos del Portafolio de Máximo Sharpe Ratio")
