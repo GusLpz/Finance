@@ -53,11 +53,7 @@ def calcular_drawdown_diario(returns):
     # Obtener el drawdown máximo
     max_drawdown = drawdown.min()
 
-    return {
-        "drawdowns": drawdown,      # Serie con el drawdown en cada punto
-        "max_drawdown": max_drawdown  # Drawdown máximo
-    }
-
+    return max_drawdown 
 
 def calcular_sortino_ratio(returns, risk_free_rate=0.02, target_return=0):
     excess_returns = returns - risk_free_rate / 252
