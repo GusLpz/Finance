@@ -496,7 +496,7 @@ else:
             # Filtrar datos de 2010 a 2020
 
             start_date="2010-01-01"
-            end_date="2020-12-31
+            end_date="2020-12-31"
 
             precios = yf.download(simbolos, start=start_date, end=end_date)['Close']
             precios = precios.ffill().dropna()  # Rellenar valores faltantes y eliminar filas vacías
