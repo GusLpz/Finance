@@ -40,11 +40,24 @@ def calcular_sharpe_ratio(returns, risk_free_rate=0.02):
     excess_returns = returns - risk_free_rate / 252
     return np.sqrt(252) * excess_returns.mean() / excess_returns.std()
     
-def calcular_drawdown(cumulative_returns):
-    peak = cumulative_returns.cummax()  # Encuentra el máximo acumulado
-    drawdown = (cumulative_returns - peak) / peak  # Calcula el drawdown
-    max_drawdown = drawdown.min()  # Encuentra el drawdown máximo (más negativo)
-    return max_drawdown
+def calcular_drawdown_diario(returns):
+    # Calcular los rendimientos acumulados
+    cumulative_returns = (1 + returns).cumprod()
+
+    # Encontrar el pico máximo histórico en cada punto
+    peak = cumulative_returns.cummax()
+
+    # Calcular el drawdown en cada punto
+    drawdown = (cumulative_returns - peak) / peak
+
+    # Obtener el drawdown máximo
+    max_drawdown = drawdown.min()
+
+    return {
+        "drawdowns": drawdown,      # Serie con el drawdown en cada punto
+        "max_drawdown": max_drawdown  # Drawdown máximo
+    }
+
 
 def calcular_sortino_ratio(returns, risk_free_rate=0.02, target_return=0):
     excess_returns = returns - risk_free_rate / 252
@@ -247,7 +260,7 @@ with tab1:
     sesgo = calcular_sesgo(returns[selected_asset])
     exceso_curtosis = calcular_exceso_curtosis(returns[selected_asset]) 
     comReturns = calcular_metricas(returns[selected_asset])
-    drowdown = calcular_drawdown(comReturns[1])
+    drowdown = calcular_drawdown_diario(returns[selected_asset])
     
 
     
@@ -264,8 +277,8 @@ with tab1:
 
     col7, col8, col9 = st.columns(3)
     col7.metric("Sesgo de Retornos", f"{sesgo:.3f}")  # Nueva métrica
-    col8.metric("Exceso de Curtosis", f"{exceso_curtosis:.2%}")  # Nueva métrica
-    col9.metric("DrowDown", f"{drowdown:.4f}")  # Nueva métrica
+    col8.metric("Exceso de Curtosis", f"{exceso_curtosis:.3f}")  # Nueva métrica
+    col9.metric("DrowDown", f"{drowdown:.2%}")  # Nueva métrica
     
     # Gráfico de precio normalizado del activo seleccionado vs benchmark
     fig_asset = go.Figure()
