@@ -177,7 +177,7 @@ else:
     portfolio_cumulative_returns = (1 + portfolio_returns).cumprod() - 1
 
     # Crear pestañas
-    tab1, tab2 = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio"])
+    tab1, tab2, tab3 = st.tabs(["Análisis de Activos Individuales", "Análisis del Portafolio", "Portafolio Mínima Varianza"])
 
     etf_summaries = {
         "IEI": {
@@ -425,7 +425,7 @@ else:
         st.plotly_chart(fig_comparison, use_container_width=True, key="returns_comparison")
 
 # Crear nueva pestaña para análisis de portafolio de mínima varianza
-tab3 = st.tabs(["Portafolio de Mínima Varianza"])[0]
+
 
 with tab3:
     st.header("Análisis del Portafolio de Mínima Varianza")
