@@ -645,7 +645,7 @@ with tab5:
     st.header("Portafolio de Mínima Volatilidad con Objetivo de Rendimiento (MXN)")
     
     # Definir objetivo de rendimiento anual
-    rendimiento_objetivo_anual = 0.10  # 10%
+    rendimiento_objetivo_anual = 0.08  # 10%
 
     returns_mxnn = calcular_returns_mxn(etfs_permitidos)
     
