@@ -720,13 +720,13 @@ with tab7:
     weights_min_vol_target = np.array([0.9248, 0.0, 0.0752, 0.0, 0.0])  # Portafolio de Mínima Volatilidad
     weights_equal = np.array([1 / len(etfs_permitidos)] * len(etfs_permitidos))  # Portafolio Equitativo
     
-    # Descargar datos de Yahoo Finance
+    # Descargamos los datos
     def obtener_datos(etfs, benchmark, start_date, end_date):
         symbols = etfs + [benchmark]
         data = yf.download(symbols, start=start_date, end=end_date)['Adj Close']
         return data.ffill().dropna()
     
-    # Calcular métricas del portafolio
+    # Calcular métricas de los portafolios
     def calcular_metricas(returns, weights):
         portfolio_returns = (returns * weights).sum(axis=1)
         annual_return = portfolio_returns.mean() * 252
@@ -761,7 +761,7 @@ with tab7:
         return drawdown.min()
     
     # Descargar los datos
-    st.info("Descargando datos...")
+    
     data = obtener_datos(etfs_permitidos, benchmark_symbol, backtest_start, backtest_end)
     returns = data.pct_change().dropna()
     
