@@ -713,12 +713,21 @@ with tab7:
     backtest_end = "2023-12-31"
     df_backtest = df_stocks.loc[backtest_start:backtest_end]
 
-    # Pesos óptimos portafolios anteriores
-    weights_min_var = np.array([0.2, 0.2, 0.2, 0.2, 0.2])  # Portafolio de Mínima Varianza
-    weights_max_sharpe = np.array([0.0, 0.0, 0.975, 0.0, 0.025])  # Portafolio de Máximo Sharpe Ratio
-    weights_min_vol_target = np.array([0.9248, 0.0, 0.0752, 0.0, 0.0])  # Portafolio de Mínima Volatilidad
+    # Validar que los símbolos existen en los datos descargados
+    simbolos_presentes = [s for s in simbolos if s in returns.columns]
+    simbolos_faltantes = [s for s in simbolos if s not in returns.columns]
 
-    # Diccionario con los pesos para cada portafolio
+    if simbolos_faltantes:
+        st.warning(f"Los siguientes símbolos no están presentes en los datos: {', '.join(simbolos_faltantes)}")
+        if not simbolos_presentes:
+            st.error("Ninguno de los símbolos ingresados está disponible. Por favor, verifica los datos.")
+            st.stop()
+
+    # Pesos óptimos tomados de las imágenes (ajustados a los presentes)
+    weights_min_var = np.array([0.2, 0.2, 0.2, 0.2, 0.2])[:len(simbolos_presentes)]
+    weights_max_sharpe = np.array([0.0, 0.0, 0.975, 0.0, 0.025])[:len(simbolos_presentes)]
+    weights_min_vol_target = np.array([0.9248, 0.0, 0.0752, 0.0, 0.0])[:len(simbolos_presentes)]
+
     portfolios = {
         "Mínima Varianza": weights_min_var,
         "Máximo Sharpe Ratio": weights_max_sharpe,
@@ -727,7 +736,12 @@ with tab7:
 
     metrics = {}
     for name, weights in portfolios.items():
-        port_returns = calcular_rendimientos_portafolio(returns[simbolos].loc[backtest_start:backtest_end], weights)
+        # Validar que los datos necesarios estén presentes
+        if len(simbolos_presentes) != len(weights):
+            st.warning(f"El portafolio {name} tiene un número de pesos que no coincide con los datos disponibles.")
+            continue
+
+        port_returns = calcular_rendimientos_portafolio(returns[simbolos_presentes].loc[backtest_start:backtest_end], weights)
         cumulative_return = (1 + port_returns).prod() - 1
         annual_return = port_returns.mean() * 252
         annual_volatility = port_returns.std() * np.sqrt(252)
@@ -752,7 +766,7 @@ with tab7:
         }
 
     # Comparar con benchmark y portafolio equitativo
-    equal_weights = [1 / len(simbolos)] * len(simbolos)
+    equal_weights = [1 / len(simbolos_presentes)] * len(simbolos_presentes)
     benchmark_returns = returns[benchmark].loc[backtest_start:backtest_end]
     benchmark_cumulative = (1 + benchmark_returns).prod() - 1
     benchmark_annual = benchmark_returns.mean() * 252
@@ -777,44 +791,23 @@ with tab7:
         "Rendimiento Acumulado": benchmark_cumulative
     }
 
-    equal_returns = calcular_rendimientos_portafolio(returns[simbolos].loc[backtest_start:backtest_end], equal_weights)
-    equal_cumulative = (1 + equal_returns).prod() - 1
-    equal_annual = equal_returns.mean() * 252
-    equal_volatility = equal_returns.std() * np.sqrt(252)
-    equal_sharpe = calcular_sharpe_ratio(equal_returns)
-    equal_sortino = calcular_sortino_ratio(equal_returns)
-    equal_var, equal_cvar = calcular_var_cvar(equal_returns)
-    equal_skewness = calcular_sesgo(equal_returns)
-    equal_kurtosis = calcular_exceso_curtosis(equal_returns)
-    equal_drawdown = calcular_ultimo_drawdown((1 + equal_returns).cumprod())
-
-    metrics["Portafolio Equitativo"] = {
-        "Rendimiento Anualizado": equal_annual,
-        "Volatilidad Anualizada": equal_volatility,
-        "Sharpe Ratio": equal_sharpe,
-        "Sortino Ratio": equal_sortino,
-        "VaR 95%": equal_var,
-        "CVaR 95%": equal_cvar,
-        "Sesgo": equal_skewness,
-        "Exceso de Curtosis": equal_kurtosis,
-        "Drawdown": equal_drawdown,
-        "Rendimiento Acumulado": equal_cumulative
-    }
-
     # Mostrar resultados en tabla
     st.subheader("Resultados del Backtesting (2021-2023)")
-    metrics_df = pd.DataFrame(metrics).T
-    st.dataframe(metrics_df.style.format("{:.2%}", subset=["Rendimiento Anualizado", "Volatilidad Anualizada", "Rendimiento Acumulado"])
-                 .format("{:.2f}", subset=["Sharpe Ratio", "Sortino Ratio", "VaR 95%", "CVaR 95%", "Sesgo", "Exceso de Curtosis", "Drawdown"]))
+    if metrics:
+        metrics_df = pd.DataFrame(metrics).T
+        st.dataframe(metrics_df.style.format("{:.2%}", subset=["Rendimiento Anualizado", "Volatilidad Anualizada", "Rendimiento Acumulado"])
+                     .format("{:.2f}", subset=["Sharpe Ratio", "Sortino Ratio", "VaR 95%", "CVaR 95%", "Sesgo", "Exceso de Curtosis", "Drawdown"]))
+    else:
+        st.warning("No se calcularon métricas debido a datos insuficientes.")
 
     # Gráfico comparativo de rendimientos acumulados
-    fig = go.Figure()
-    for name, weights in portfolios.items():
-        port_returns = calcular_rendimientos_portafolio(returns[simbolos].loc[backtest_start:backtest_end], weights)
-        cumulative = (1 + port_returns).cumprod() - 1
-        fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative, name=name))
-    fig.add_trace(go.Scatter(x=(1 + benchmark_returns).cumprod().index, y=(1 + benchmark_returns).cumprod() - 1, name="Benchmark"))
-    fig.add_trace(go.Scatter(x=(1 + equal_returns).cumprod().index, y=(1 + equal_returns).cumprod() - 1, name="Portafolio Equitativo"))
-    fig.update_layout(title="Comparación de Rendimientos Acumulados", xaxis_title="Fecha", yaxis_title="Rendimientos Acumulados")
-    st.plotly_chart(fig, use_container_width=True)
-
+    if "Benchmark" in metrics:
+        fig = go.Figure()
+        for name, weights in portfolios.items():
+            if len(weights) == len(simbolos_presentes):
+                port_returns = calcular_rendimientos_portafolio(returns[simbolos_presentes].loc[backtest_start:backtest_end], weights)
+                cumulative = (1 + port_returns).cumprod() - 1
+                fig.add_trace(go.Scatter(x=cumulative.index, y=cumulative, name=name))
+        fig.add_trace(go.Scatter(x=(1 + benchmark_returns).cumprod().index, y=(1 + benchmark_returns).cumprod() - 1, name="Benchmark"))
+        fig.update_layout(title="Comparación de Rendimientos Acumulados", xaxis_title="Fecha", yaxis_title="Rendimientos Acumulados")
+        st.plotly_chart(fig, use_container_width=True)
