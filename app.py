@@ -97,7 +97,7 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         y=counts[mask_before_var],
         width=np.diff(bins)[mask_before_var],
         name='Retornos < VaR',
-        marker_color='rgba(255, 0, 54, 0.6)'
+        marker_color='rgba(255, 69, 0, 0.8)'  # Rojo intenso
     ))
 
     fig.add_trace(go.Bar(
@@ -105,7 +105,7 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         y=counts[~mask_before_var],
         width=np.diff(bins)[~mask_before_var],
         name='Retornos > VaR',
-        marker_color='rgba(31, 180, 223, 0.6)'
+        marker_color='rgba(50, 205, 50, 0.8)'  # Verde brillante
     ))
 
     fig.add_trace(go.Scatter(
@@ -113,7 +113,7 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         y=[0, max(counts)],
         mode='lines',
         name='VaR 95%',
-        line=dict(color='lime', width=2, dash='dash')
+        line=dict(color='dodgerblue', width=3, dash='dash')  # Azul brillante
     ))
 
     fig.add_trace(go.Scatter(
@@ -121,16 +121,18 @@ def crear_histograma_distribucion(returns, var_95, cvar_95, title):
         y=[0, max(counts)],
         mode='lines',
         name='CVaR 95%',
-        line=dict(color='purple', width=2, dash='dot')
+        line=dict(color='purple', width=3, dash='dot')  # Morado brillante
     ))
 
     fig.update_layout(
-        title=dict(text=title, font=dict(size=18, color='teal')),
-        xaxis=dict(title='Retornos', showgrid=True, gridcolor='lightgrey'),
-        yaxis=dict(title='Frecuencia', showgrid=True, gridcolor='lightgrey'),
+        title=dict(text=title, font=dict(size=20, color='midnightblue')),
+        xaxis=dict(title='Retornos', showgrid=True, gridcolor='lightblue', zerolinecolor='blue'),
+        yaxis=dict(title='Frecuencia', showgrid=True, gridcolor='lightblue', zerolinecolor='blue'),
         barmode='overlay',
-        bargap=0,
-        plot_bgcolor='rgba(240,240,240,1)'
+        bargap=0.1,
+        plot_bgcolor='rgba(240, 248, 255, 1)',  # Azul claro
+        paper_bgcolor='rgba(230, 230, 250, 1)',  # Lavanda
+        legend=dict(font=dict(size=12, color='darkblue'))
     )
     return fig
 
