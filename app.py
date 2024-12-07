@@ -685,27 +685,8 @@ with tab5:
     )
     st.plotly_chart(fig_cumulative, use_container_width=True)
     
-   
-    
-    
 
-with tab6:
-    st.title('Cálculo de Riesgo con el Modelo de Black-Litterman')
-    # Datos de ejempl
-    returns = pd.DataFrame({
-    'Asset1': np.random.normal(0.01, 0.02, 100),
-    'Asset2': np.random.normal(0.02, 0.03, 100),
-    'Asset3': np.random.normal(0.015, 0.025, 100)
-    })
-
-    P = np.array([[1, -1, 0], [0, 1, -1]])
-    Q = np.array([0.01, 0.02])
-    omega = np.diag([0.0001, 0.0001])
-    
-    riesgo = calcular_riesgo_black_litterman(returns, P, Q, omega)
-    st.write(f'El riesgo calculado es: {riesgo}')
-
-with tab7: 
+with tab6: 
     # Rango de fechas para el backtesting
     backtest_start = "2021-01-01"
     backtest_end = "2023-12-31"
@@ -794,3 +775,19 @@ with tab7:
     fig.add_trace(go.Scatter(x=benchmark_cumulative.index, y=benchmark_cumulative, name="Benchmark"))
     fig.update_layout(title="Rendimientos Acumulados", xaxis_title="Fecha", yaxis_title="Rendimiento Acumulado")
     st.plotly_chart(fig)
+
+with tab7:
+    st.title('Cálculo de Riesgo con el Modelo de Black-Litterman')
+    # Datos de ejempl
+    returns = pd.DataFrame({
+    'Asset1': np.random.normal(0.01, 0.02, 100),
+    'Asset2': np.random.normal(0.02, 0.03, 100),
+    'Asset3': np.random.normal(0.015, 0.025, 100)
+    })
+
+    P = np.array([[1, -1, 0], [0, 1, -1]])
+    Q = np.array([0.01, 0.02])
+    omega = np.diag([0.0001, 0.0001])
+    
+    riesgo = calcular_riesgo_black_litterman(returns, P, Q, omega)
+    st.write(f'El riesgo calculado es: {riesgo}')
