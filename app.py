@@ -472,7 +472,6 @@ else:
         # Gráfico de comparación de rendimientos
         st.plotly_chart(fig_comparison, use_container_width=True, key="returns_comparison")
 
-# Crear nueva pestaña para análisis de portafolio de mínima varianza
 
 
 with tab3:
