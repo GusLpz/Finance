@@ -12,6 +12,32 @@ st.sidebar.title("📈 Analizador Cool de Portafolio de Inversión")
 
 # Funciones auxiliares
 
+def calcular_minima_volatilidad_objetivo(returns, target_return=0.10):
+    n = returns.shape[1]
+    
+    # Función objetivo: minimizar la varianza del portafolio
+    def portfolio_volatility(weights):
+        cov_matrix = returns.cov()
+        return np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)) * 252)
+
+    # Restricciones
+    constraints = [
+        {'type': 'eq', 'fun': lambda weights: np.sum(weights) - 1},  # Pesos deben sumar 1
+        {'type': 'eq', 'fun': lambda weights: np.dot(weights, returns.mean() * 252) - target_return}  # Rendimiento objetivo anualizado
+    ]
+    
+    # Límites: los pesos deben estar entre 0 y 1
+    bounds = tuple((0, 1) for _ in range(n))
+    
+    # Pesos iniciales iguales
+    initial_weights = np.array([1 / n] * n)
+    
+    # Optimización
+    result = minimize(portfolio_volatility, initial_weights, method='SLSQP', bounds=bounds, constraints=constraints)
+    
+    return result.x  # Retorna los pesos óptimos
+
+
 def calcular_riesgo_black_litterman(returns, P, Q, omega, tau=0.05):
     # Cálculo de la matriz de covarianza
     cov_matrix = returns.cov()
@@ -605,6 +631,60 @@ with tab4:
 
 with tab5:
     st.header("Portafolio de Mínima Volatilidad con Objetivo de Rendimiento (MXN)")
+
+    # Convertir los rendimientos a pesos mexicanos suponiendo un tipo de cambio simulado
+    tipo_cambio_usd_mxn = 17.0  # Puedes actualizar el tipo de cambio según sea necesario
+    returns_mxn = returns[simbolos] * tipo_cambio_usd_mxn
+    
+    # Calcular los pesos óptimos para el portafolio de mínima volatilidad con un rendimiento objetivo del 10%
+    min_vol_weights = calcular_minima_volatilidad_objetivo(returns_mxn)
+
+    # Calcular métricas del portafolio de mínima volatilidad con rendimiento objetivo
+    min_vol_returns = calcular_rendimientos_portafolio(returns_mxn, min_vol_weights)
+    min_vol_cumulative = (1 + min_vol_returns).cumprod() - 1
+    min_vol_risk = np.sqrt(252) * min_vol_returns.std()
+    min_vol_mean_return = min_vol_returns.mean() * 252  # Anualizado
+
+    st.subheader("Pesos del Portafolio de Mínima Volatilidad con Objetivo de Rendimiento")
+    weights_df = pd.DataFrame({
+        "ETF": simbolos,
+        "Peso Óptimo": min_vol_weights
+    })
+    st.dataframe(weights_df.style.format({"Peso Óptimo": "{:.2%}"}))
+
+    # Mostrar métricas clave
+    col1, col2 = st.columns(2)
+    col1.metric("Riesgo (Desviación Estándar Anualizada)", f"{min_vol_risk:.2%}")
+    col2.metric("Rendimiento Esperado Anualizado", f"{min_vol_mean_return:.2%}")
+
+    # Comparar rendimientos acumulados
+    fig_cumulative = go.Figure()
+    fig_cumulative.add_trace(go.Scatter(
+        x=min_vol_cumulative.index, 
+        y=min_vol_cumulative, 
+        name="Portafolio de Mínima Volatilidad con Objetivo",
+        line=dict(color='blue')
+    ))
+    fig_cumulative.add_trace(go.Scatter(
+        x=portfolio_cumulative_returns.index, 
+        y=portfolio_cumulative_returns, 
+        name="Portafolio Actual",
+        line=dict(color='orange', dash='dot')
+    ))
+    fig_cumulative.add_trace(go.Scatter(
+        x=cumulative_returns.index, 
+        y=cumulative_returns[benchmark], 
+        name=f"Benchmark: {selected_benchmark}",
+        line=dict(color='green', dash='dash')
+    ))
+    fig_cumulative.update_layout(
+        title="Comparación de Rendimientos Acumulados",
+        xaxis_title="Fecha",
+        yaxis_title="Rendimientos Acumulados",
+        plot_bgcolor='rgba(240,240,240,1)'
+    )
+    st.plotly_chart(fig_cumulative, use_container_width=True)
+    
    
     
     
